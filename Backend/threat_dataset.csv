@@ -1,0 +1,6 @@
+ip_address,threat_type,severity,source,timestamp
+8.8.8.8,DDoS,High,IDS,2026-06-02 14:51:02.382717
+8.8.8.8,DDoS,High,IDS,2026-06-02 14:51:03.249890
+8.8.8.8,DDoS,High,IDS,2026-06-02 15:44:12.611445
+1.1.1.1,Malware,Medium,Firewall,2026-06-02 15:44:12.611463
+192.168.1.10,Brute Force,Low,WAF,2026-06-02 15:44:12.611472

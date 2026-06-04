@@ -1,0 +1,4 @@
+ip_address,threat_type,severity,source
+8.8.8.8,DDoS,High,IDS
+1.1.1.1,Malware,Medium,Firewall
+192.168.1.10,Brute Force,Low,WAF
