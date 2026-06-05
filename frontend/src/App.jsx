@@ -42,6 +42,13 @@ function App() {
 const [showModal, setShowModal] =
   useState(false);
 
+  const threatNews = [
+  "New ransomware campaign detected",
+  "Critical Microsoft vulnerability reported",
+  "Banking malware activity increasing",
+  "Zero-day exploit discovered",
+];
+
   const [searchTerm, setSearchTerm] =
   useState("");
   const threatCounts = {};
@@ -331,6 +338,12 @@ const topThreat =
     const currentTime =
   new Date().toLocaleString();
 
+  const systemStatus = "ONLINE";
+const databaseStatus = "CONNECTED";
+const aiEngineStatus = "ACTIVE";
+const threatCoverage = 95;
+const detectionAccuracy = 98;
+const responseReadiness = 92;
 const riskScore =
   highCount * 20 +
   mediumCount * 10 +
@@ -993,6 +1006,101 @@ const filteredPredictions =
       ? "Critical"
       : "Moderate"}
   </p>
+</div>
+<div
+  style={{
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3>Cyber Threat News Feed</h3>
+
+  {threatNews.map((news, index) => (
+    <p key={index}>📰 {news}</p>
+  ))}
+</div>
+
+<div
+  style={{
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3>System Health Monitor</h3>
+
+  <p>🟢 System Status: {systemStatus}</p>
+
+  <p>🟢 Database: {databaseStatus}</p>
+
+  <p>🟢 AI Engine: {aiEngineStatus}</p>
+</div>
+
+<div
+  style={{
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+  }}
+>
+  <h3>Threat Intelligence Metrics</h3>
+
+  <p>
+    🎯 Threat Coverage:
+    {" "}
+    {threatCoverage}%
+  </p>
+
+  <progress
+    value={threatCoverage}
+    max="100"
+    style={{
+      width: "100%",
+      height: "20px",
+    }}
+  />
+
+  <p
+    style={{
+      marginTop: "15px",
+    }}
+  >
+    🧠 Detection Accuracy:
+    {" "}
+    {detectionAccuracy}%
+  </p>
+
+  <progress
+    value={detectionAccuracy}
+    max="100"
+    style={{
+      width: "100%",
+      height: "20px",
+    }}
+  />
+
+  <p
+    style={{
+      marginTop: "15px",
+    }}
+  >
+    ⚡ Response Readiness:
+    {" "}
+    {responseReadiness}%
+  </p>
+
+  <progress
+    value={responseReadiness}
+    max="100"
+    style={{
+      width: "100%",
+      height: "20px",
+    }}
+  />
 </div>
 
 <h2>Prediction History</h2>
