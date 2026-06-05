@@ -1,4 +1,16 @@
 import { useState, useEffect } from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 function App() {
   const [username, setUsername] = useState("");
@@ -13,6 +25,8 @@ function App() {
 
   const [predictions, setPredictions] =
     useState([]);
+  const [searchTerm, setSearchTerm] =
+  useState("");
 
   useEffect(() => {
     const token =
@@ -172,6 +186,36 @@ if (savedUsername) {
         p.predicted_severity ===
         "Low"
     ).length;
+
+    const chartData = [
+  {
+    name: "High",
+    value: highCount,
+  },
+  {
+    name: "Medium",
+    value: mediumCount,
+  },
+  {
+    name: "Low",
+    value: lowCount,
+  },
+];
+
+const COLORS = [
+  "#ef4444",
+  "#facc15",
+  "#22c55e",
+];
+
+const filteredPredictions =
+  predictions.filter((item) =>
+    item.threat_type
+      ?.toLowerCase()
+      .includes(
+        searchTerm.toLowerCase()
+      )
+  );
 
     if (loggedIn) {
   return (
@@ -356,6 +400,23 @@ if (savedUsername) {
         )}
       </div>
 
+      <input
+  type="text"
+  placeholder="Search Threat Type"
+  value={searchTerm}
+  onChange={(e) =>
+    setSearchTerm(
+      e.target.value
+    )
+  }
+  style={{
+    width: "300px",
+    padding: "10px",
+    marginBottom: "15px",
+    borderRadius: "8px",
+  }}
+/>
+
       <div
         style={{
           background: "#1e293b",
@@ -383,7 +444,7 @@ if (savedUsername) {
           </thead>
 
           <tbody>
-            {predictions.map((item) => (
+            {filteredPredictions.map((item) => (
               <tr key={item.id}>
                 <td>{item.id}</td>
                 <td>{item.threat_type}</td>
