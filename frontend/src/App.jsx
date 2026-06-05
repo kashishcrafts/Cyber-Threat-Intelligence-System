@@ -1,16 +1,13 @@
-import { useState, useEffect } from "react";
 import {
   PieChart,
   Pie,
   Cell,
   Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
+  Legend
 } from "recharts";
+import { useState, useEffect } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function App() {
   const [username, setUsername] = useState("");
@@ -27,6 +24,7 @@ function App() {
     useState([]);
   const [searchTerm, setSearchTerm] =
   useState("");
+  
 
   useEffect(() => {
     const token =
@@ -162,6 +160,80 @@ if (savedUsername) {
       );
     }
   };
+
+  const handleDelete =
+  async (id) => {
+    try {
+      await fetch(
+        `http://127.0.0.1:8000/predictions/${id}`,
+        {
+          method:
+            "DELETE",
+        }
+      );
+
+      fetchPredictionHistory();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+ const exportPDF = () => {
+  const doc = new jsPDF();
+
+  doc.text(
+    "Cyber Threat Report",
+    14,
+    15
+  );
+
+  autoTable(doc, {
+    head: [
+      [
+        "ID",
+        "Threat Type",
+        "Source",
+        "Severity",
+      ],
+    ],
+    body: predictions.map((item) => [
+      item.id,
+      item.threat_type,
+      item.source,
+      item.predicted_severity,
+    ]),
+  });
+
+  doc.save(
+    "CyberThreatReport.pdf"
+  );
+}; 
+
+const exportCSV = () => {
+  const rows = predictions.map(
+    (item) =>
+      `${item.id},${item.threat_type},${item.source},${item.predicted_severity}`
+  );
+
+  const csv =
+    "ID,Threat Type,Source,Severity\n" +
+    rows.join("\n");
+
+  const blob = new Blob([csv], {
+    type: "text/csv",
+  });
+
+  const url =
+    window.URL.createObjectURL(blob);
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+  a.download =
+    "CyberThreatReport.csv";
+
+  a.click();
+};
 
   const totalThreats =
     predictions.length;
@@ -424,7 +496,94 @@ const filteredPredictions =
           borderRadius: "10px",
         }}
       >
-        <h2>Prediction History</h2>
+        <div
+  style={{
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "10px",
+    marginTop: "20px",
+    marginBottom: "20px",
+  }}
+>
+  <h2>Threat Analytics</h2>
+
+  <PieChart width={400} height={300}>
+    <Pie
+      data={chartData}
+      cx="50%"
+      cy="50%"
+      outerRadius={100}
+      dataKey="value"
+      label
+    >
+      {chartData.map(
+        (entry, index) => (
+          <Cell
+            key={index}
+            fill={
+              COLORS[index]
+            }
+          />
+        )
+      )}
+    </Pie>
+
+    <Tooltip />
+    <Legend />
+  </PieChart>
+</div>
+
+<h2>Prediction History</h2>
+
+        <input
+  type="text"
+  placeholder="Search Threat Type..."
+  value={searchTerm}
+  onChange={(e) =>
+    setSearchTerm(e.target.value)
+  }
+  style={{
+    width: "300px",
+    padding: "10px",
+    marginBottom: "15px",
+    borderRadius: "8px",
+  }}
+/>
+ <div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginBottom: "15px",
+  }}
+>
+  <button
+    onClick={exportPDF}
+    style={{
+      background: "#22c55e",
+      color: "white",
+      border: "none",
+      padding: "10px 20px",
+      borderRadius: "8px",
+      cursor: "pointer",
+    }}
+  >
+    Export PDF
+  </button>
+
+  <button
+    onClick={exportCSV}
+    style={{
+      background: "#3b82f6",
+      color: "white",
+      border: "none",
+      padding: "10px 20px",
+      borderRadius: "8px",
+      cursor: "pointer",
+    }}
+  >
+    Export CSV
+  </button>
+</div> 
 
         <table
           style={{
@@ -439,17 +598,39 @@ const filteredPredictions =
               <th>ID</th>
               <th>Threat Type</th>
               <th>Source</th>
-              <th>Severity</th>
+              <th>Action</th>
             </tr>
           </thead>
 
           <tbody>
-            {filteredPredictions.map((item) => (
+            {predictions.map((item) => (
               <tr key={item.id}>
                 <td>{item.id}</td>
                 <td>{item.threat_type}</td>
                 <td>{item.source}</td>
                 <td>{item.predicted_severity}</td>
+                <td>
+  <button
+    onClick={() =>
+      handleDelete(
+        item.id
+      )
+    }
+    style={{
+      background:
+        "#ef4444",
+      color: "white",
+      border: "none",
+      padding:
+        "5px 10px",
+      borderRadius:
+        "5px",
+      cursor: "pointer",
+    }}
+  >
+    Delete
+  </button>
+</td>
               </tr>
             ))}
           </tbody>
