@@ -19,3 +19,24 @@ def get_prediction_history(
     )
 
     return predictions
+
+@router.delete("/{prediction_id}")
+def delete_prediction(
+    prediction_id: int,
+    db: Session = Depends(get_db)
+):
+    prediction = (
+        db.query(PredictionLog)
+        .filter(
+            PredictionLog.id == prediction_id
+        )
+        .first()
+    )
+
+    if prediction:
+        db.delete(prediction)
+        db.commit()
+
+    return {
+        "message": "Prediction Deleted"
+    }
