@@ -15,67 +15,101 @@ import {
 } from "recharts";
 
 import { useState, useEffect } from "react";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-BarChart,
-Bar
 
 function App() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loggedIn, setLoggedIn] = useState(false);
+  // =========================
+  // AUTH
+  // =========================
 
-  const [threatType, setThreatType] = useState("");
-  const [source, setSource] = useState("");
+  const [username, setUsername] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [loggedIn, setLoggedIn] =
+    useState(false);
+
+  // =========================
+  // THREAT INPUT
+  // =========================
+
+  const [threatType, setThreatType] =
+    useState("");
+
+  const [source, setSource] =
+    useState("");
+
+  // =========================
+  // DATA
+  // =========================
 
   const [predictions, setPredictions] =
     useState([]);
 
-  const recentPredictions =
-  predictions.slice(0, 5);
-
-  const [predictionResult, setPredictionResult] =
+  const [predictionResult,
+    setPredictionResult] =
     useState("");
-    const [selectedThreat, setSelectedThreat] =
-  useState(null);
 
-const [showModal, setShowModal] =
-  useState(false);
+  // =========================
+  // SEARCH
+  // =========================
+
+  const [searchTerm,
+    setSearchTerm] =
+    useState("");
+
+  // =========================
+  // MODAL
+  // =========================
+
+  const [selectedThreat,
+    setSelectedThreat] =
+    useState(null);
+
+  const [showModal,
+    setShowModal] =
+    useState(false);
+
+  // =========================
+  // STATIC DATA
+  // =========================
 
   const threatNews = [
-  "New ransomware campaign detected",
-  "Critical Microsoft vulnerability reported",
-  "Banking malware activity increasing",
-  "Zero-day exploit discovered",
-];
+    "New ransomware campaign detected",
+    "Critical Microsoft vulnerability reported",
+    "Banking malware activity increasing",
+    "Zero-day exploit discovered",
+  ];
 
-  const [searchTerm, setSearchTerm] =
-  useState("");
-  const threatCounts = {};
+  const mitreCategories = [
+    "Initial Access",
+    "Execution",
+    "Persistence",
+    "Privilege Escalation",
+    "Defense Evasion",
+    "Credential Access",
+    "Discovery",
+    "Collection",
+  ];
 
-predictions.forEach((item) => {
-  threatCounts[item.threat_type] =
-    (threatCounts[item.threat_type] || 0) + 1;
-});
+  // =========================
+  // LOAD USER
+  // =========================
 
-const barData =
-  Object.entries(threatCounts).map(
-    ([name, count]) => ({
-      name,
-      count,
-    })
-  );
-  
   useEffect(() => {
     const token =
       localStorage.getItem("token");
 
-      const savedUsername =
-  localStorage.getItem("username");
+    const savedUser =
+      localStorage.getItem("username");
 
-if (savedUsername) {
-  setUsername(savedUsername);
-}
+    if (savedUser) {
+      setUsername(savedUser);
+    }
 
     if (token) {
       setLoggedIn(true);
@@ -83,14 +117,23 @@ if (savedUsername) {
     }
   }, []);
 
-  useEffect(() => {
-  const interval = setInterval(() => {
-    fetchPredictionHistory();
-  }, 10000);
+  // =========================
+  // AUTO REFRESH
+  // =========================
 
-  return () =>
-    clearInterval(interval);
-}, []);
+  useEffect(() => {
+    const interval =
+      setInterval(() => {
+        fetchPredictionHistory();
+      }, 10000);
+
+    return () =>
+      clearInterval(interval);
+  }, []);
+
+  // =========================
+  // LOGIN
+  // =========================
 
   const handleLogin = async () => {
     try {
@@ -114,45 +157,55 @@ if (savedUsername) {
         await response.json();
 
       if (data.access_token) {
-  localStorage.setItem(
-    "token",
-    data.access_token
-  );
+        localStorage.setItem(
+          "token",
+          data.access_token
+        );
 
-  localStorage.setItem(
-    "username",
-    username
-  );
+        localStorage.setItem(
+          "username",
+          username
+        );
 
-  setUsername(username);
+        setLoggedIn(true);
 
-  setLoggedIn(true);
-
-  fetchPredictionHistory();
-}
-      
-      else {
+        fetchPredictionHistory();
+      } else {
         alert(
-          data.message ||
-            "Login Failed"
+          "Invalid Credentials"
         );
       }
     } catch (error) {
       console.error(error);
-      alert("SERVER ERROR");
+      alert("Server Error");
     }
   };
 
+  // =========================
+  // LOGOUT
+  // =========================
+
   const handleLogout = () => {
-    localStorage.removeItem("token");
-     localStorage.removeItem("username");
+    localStorage.removeItem(
+      "token"
+    );
+
+    localStorage.removeItem(
+      "username"
+    );
 
     setLoggedIn(false);
+
     setUsername("");
 
-    setPredictionResult("");
     setPredictions([]);
+
+    setPredictionResult("");
   };
+
+  // =========================
+  // HISTORY
+  // =========================
 
   const fetchPredictionHistory =
     async () => {
@@ -171,126 +224,151 @@ if (savedUsername) {
       }
     };
 
-  const handlePredict = async () => {
-    try {
-      const response =
-        await fetch(
-          "http://127.0.0.1:8000/predict/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              threat_type:
-                threatType,
-              source:
+  // =========================
+  // PREDICT
+  // =========================
+
+  const handlePredict =
+    async () => {
+      try {
+        const response =
+          await fetch(
+            "http://127.0.0.1:8000/predict/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                threat_type:
+                  threatType,
                 source,
-            }),
+              }),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        setPredictionResult(
+          data.predicted_severity
+        );
+
+        fetchPredictionHistory();
+
+        setThreatType("");
+        setSource("");
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  // =========================
+  // DELETE
+  // =========================
+
+  const handleDelete =
+    async (id) => {
+      try {
+        await fetch(
+          `http://127.0.0.1:8000/predictions/${id}`,
+          {
+            method: "DELETE",
           }
         );
 
-      const data =
-        await response.json();
+        fetchPredictionHistory();
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-      setPredictionResult(
-        data.predicted_severity
-      );
+  // =========================
+  // MODAL
+  // =========================
 
-      fetchPredictionHistory();
+  const openThreatDetails =
+    (threat) => {
+      setSelectedThreat(threat);
+      setShowModal(true);
+    };
 
-      setThreatType("");
-      setSource("");
-    } catch (error) {
-      console.error(error);
-      alert(
-        "Prediction Failed"
-      );
-    }
-  };
+  // =========================
+  // EXPORT PDF
+  // =========================
 
-  const handleDelete =
-  async (id) => {
-    try {
-      await fetch(
-        `http://127.0.0.1:8000/predictions/${id}`,
-        {
-          method:
-            "DELETE",
-        }
-      );
+  const exportPDF = () => {
+    const doc =
+      new jsPDF();
 
-      fetchPredictionHistory();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    doc.text(
+      "Cyber Threat Report",
+      14,
+      15
+    );
 
-  const openThreatDetails = (
-  threat
-) => {
-  setSelectedThreat(threat);
-  setShowModal(true);
-};
-
- const exportPDF = () => {
-  const doc = new jsPDF();
-
-  doc.text(
-    "Cyber Threat Report",
-    14,
-    15
-  );
-
-  autoTable(doc, {
-    head: [
-      [
+    autoTable(doc, {
+      head: [[
         "ID",
-        "Threat Type",
+        "Threat",
         "Source",
         "Severity",
-      ],
-    ],
-    body: predictions.map((item) => [
-      item.id,
-      item.threat_type,
-      item.source,
-      item.predicted_severity,
-    ]),
-  });
+      ]],
+      body: predictions.map(
+        (item) => [
+          item.id,
+          item.threat_type,
+          item.source,
+          item.predicted_severity,
+        ]
+      ),
+    });
 
-  doc.save(
-    "CyberThreatReport.pdf"
-  );
-}; 
+    doc.save(
+      "CyberThreatReport.pdf"
+    );
+  };
 
-const exportCSV = () => {
-  const rows = predictions.map(
-    (item) =>
-      `${item.id},${item.threat_type},${item.source},${item.predicted_severity}`
-  );
+  // =========================
+  // EXPORT CSV
+  // =========================
 
-  const csv =
-    "ID,Threat Type,Source,Severity\n" +
-    rows.join("\n");
+  const exportCSV = () => {
+    const rows =
+      predictions.map(
+        (item) =>
+          `${item.id},${item.threat_type},${item.source},${item.predicted_severity}`
+      );
 
-  const blob = new Blob([csv], {
-    type: "text/csv",
-  });
+    const csv =
+      "ID,Threat Type,Source,Severity\n" +
+      rows.join("\n");
 
-  const url =
-    window.URL.createObjectURL(blob);
+    const blob =
+      new Blob([csv], {
+        type: "text/csv",
+      });
 
-  const a =
-    document.createElement("a");
+    const url =
+      window.URL.createObjectURL(
+        blob
+      );
 
-  a.href = url;
-  a.download =
-    "CyberThreatReport.csv";
+    const a =
+      document.createElement("a");
 
-  a.click();
-};
+    a.href = url;
+
+    a.download =
+      "CyberThreatReport.csv";
+
+    a.click();
+  };
+
+    // =========================
+  // DASHBOARD CALCULATIONS
+  // =========================
 
   const totalThreats =
     predictions.length;
@@ -316,1106 +394,1414 @@ const exportCSV = () => {
         "Low"
     ).length;
 
-    const chartData = [
-  {
-    name: "High",
-    value: highCount,
-  },
-  {
-    name: "Medium",
-    value: mediumCount,
-  },
-  {
-    name: "Low",
-    value: lowCount,
-  },
-];
+  const currentTime =
+    new Date().toLocaleString();
 
-const topThreat =
-  predictions.length > 0 
-    ? predictions[0].threat_type
-    : "None"; 
-    const currentTime =
-  new Date().toLocaleString();
+  const topThreat =
+    predictions.length > 0
+      ? predictions[0].threat_type
+      : "None";
 
-  const systemStatus = "ONLINE";
-const databaseStatus = "CONNECTED";
-const aiEngineStatus = "ACTIVE";
-const threatCoverage = 95;
-const detectionAccuracy = 98;
-const responseReadiness = 92;
-const riskScore =
-  highCount * 20 +
-  mediumCount * 10 +
-  lowCount * 5;
+  // =========================
+  // RISK ENGINE
+  // =========================
 
-let riskLevel = "LOW";
-let riskColor = "#22c55e";
+  const riskScore =
+    highCount * 20 +
+    mediumCount * 10 +
+    lowCount * 5;
 
-if (riskScore >= 80) {
-  riskLevel = "HIGH";
-  riskColor = "#ef4444";
-} else if (riskScore >= 40) {
-  riskLevel = "MEDIUM";
-  riskColor = "#facc15";
-}
+  let riskLevel = "LOW";
+  let riskColor = "#22c55e";
 
-const sourceData = Object.entries(
-  predictions.reduce((acc, item) => {
-    acc[item.source] =
-      (acc[item.source] || 0) + 1;
-    return acc;
-  }, {})
-).map(([source, count]) => ({
-  source,
-  count,
-}));
+  if (riskScore >= 80) {
+    riskLevel = "HIGH";
+    riskColor = "#ef4444";
+  } else if (
+    riskScore >= 40
+  ) {
+    riskLevel = "MEDIUM";
+    riskColor = "#facc15";
+  }
 
-const trendData = [
-  {
-    name: "High",
-    count: highCount,
-  },
-  {
-    name: "Medium",
-    count: mediumCount,
-  },
-  {
-    name: "Low",
-    count: lowCount,
-  },
-];
+  const securityScore =
+    Math.max(
+      0,
+      100 - riskScore
+    );
 
-const COLORS = [
-  "#ef4444",
-  "#facc15",
-  "#22c55e",
-];
+  const alertMessage =
+    highCount > 5
+      ? "🚨 CRITICAL THREAT ACTIVITY DETECTED"
+      : highCount > 0
+      ? "⚠ HIGH RISK THREATS PRESENT"
+      : "✅ SYSTEM SECURE";
 
-const filteredPredictions =
-  predictions.filter((item) =>
-    item.threat_type
-      ?.toLowerCase()
-      .includes(
-        searchTerm.toLowerCase()
+  // =========================
+  // SYSTEM HEALTH
+  // =========================
+
+  const systemStatus =
+    "ONLINE";
+
+  const databaseStatus =
+    "CONNECTED";
+
+  const aiEngineStatus =
+    "ACTIVE";
+
+  const threatCoverage =
+    95;
+
+  const detectionAccuracy =
+    98;
+
+  const responseReadiness =
+    92;
+
+  const responseStatus =
+    responseReadiness > 90
+      ? "READY"
+      : "IMPROVEMENT NEEDED";
+
+  const trendStatus =
+    highCount >
+    mediumCount
+      ? "Escalating"
+      : "Stable";
+
+  // =========================
+  // CHART DATA
+  // =========================
+
+  const chartData = [
+    {
+      name: "High",
+      value: highCount,
+    },
+    {
+      name: "Medium",
+      value: mediumCount,
+    },
+    {
+      name: "Low",
+      value: lowCount,
+    },
+  ];
+
+  const COLORS = [
+    "#ef4444",
+    "#facc15",
+    "#22c55e",
+  ];
+
+  const trendData = [
+    {
+      name: "High",
+      count: highCount,
+    },
+    {
+      name: "Medium",
+      count: mediumCount,
+    },
+    {
+      name: "Low",
+      count: lowCount,
+    },
+  ];
+
+  // =========================
+  // SOURCE ANALYTICS
+  // =========================
+
+  const sourceData =
+    Object.entries(
+      predictions.reduce(
+        (acc, item) => {
+          acc[item.source] =
+            (acc[
+              item.source
+            ] || 0) + 1;
+
+          return acc;
+        },
+        {}
       )
+    ).map(
+      ([source, count]) => ({
+        source,
+        count,
+      })
+    );
+
+  const topSources =
+    [...sourceData]
+      .sort(
+        (a, b) =>
+          b.count -
+          a.count
+      )
+      .slice(0, 5);
+
+  // =========================
+  // THREAT TYPE ANALYTICS
+  // =========================
+
+  const threatCounts =
+    {};
+
+  predictions.forEach(
+    (item) => {
+      threatCounts[
+        item.threat_type
+      ] =
+        (threatCounts[
+          item.threat_type
+        ] || 0) + 1;
+    }
   );
 
+  const barData =
+    Object.entries(
+      threatCounts
+    ).map(
+      ([name, count]) => ({
+        name,
+        count,
+      })
+    );
+
+  // =========================
+  // SEARCH
+  // =========================
+
+  const filteredPredictions =
+    predictions.filter(
+      (item) =>
+        item.threat_type
+          ?.toLowerCase()
+          .includes(
+            searchTerm.toLowerCase()
+          )
+    );
+
+  // =========================
+  // LIVE FEED
+  // =========================
+
   const recentThreats =
-  predictions
-    .slice()
-    .reverse()
-    .slice(0, 5);
+    predictions
+      .slice()
+      .reverse()
+      .slice(0, 5);
 
-    if (loggedIn) {
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0f172a",
-        color: "white",
-        padding: "30px",
-      }}
-    >
-     <h1
-  style={{
-    textAlign: "center",
-    color: "#00d4ff",
-    fontSize: "52px",
-    fontWeight: "bold",
-    marginBottom: "30px",
-    textShadow: "0 0 20px #00d4ff",
-  }}
->
-  🛡️ AI Cyber Threat Intelligence Platform
-</h1>
-<p
-  style={{
-    color: "#94a3b8",
-    textAlign: "center",
-    marginBottom: "20px",
-  }}
->
-  Last Updated:
-  {" "}
-  {currentTime}
-</p>
-<div
-  style={{
-    color: "#22c55e",
-    fontWeight: "bold",
-    fontSize: "18px",
-    textAlign: "center",
-    marginBottom: "20px",
-  }}
->
-  🟢 Live Monitoring Active
-</div>
+  const recentPredictions =
+    predictions.slice(0, 5);
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "25px",
-    borderRadius: "12px",
-    marginBottom: "25px",
-    textAlign: "center",
-    border: `2px solid ${riskColor}`,
-  }}
->
-  <h2>🤖 AI Risk Score</h2>
+  // =========================
+  // VERSION 8+
+  // FUTURE MODULES
+  // =========================
 
-  <h1
-    style={{
-      color: riskColor,
-      fontSize: "48px",
-      margin: "10px 0",
-    }}
-  >
-    {riskScore}
-  </h1>
+  const futureModules = [
+    "CVE Feed Integration",
+    "VirusTotal Integration",
+    "MITRE ATT&CK Mapping",
+    "Threat Recommendation Engine",
+    "Explainable AI Module",
+    "PostgreSQL Migration",
+    "Docker Deployment",
+    "Role Based Access Control",
+  ];
 
-  <h2
-    style={{
-      color: riskColor,
-    }}
-  >
-    <div
-  style={{
-    background: "#1e293b",
-    padding: "25px",
-    borderRadius: "12px",
-    marginBottom: "25px",
-    textAlign: "center",
-    border: `2px solid ${riskColor}`,
-  }}
->
-  <h2>🤖 AI Risk Score</h2>
+    // =========================
+  // DASHBOARD UI
+  // =========================
 
-  <h1
-    style={{
-      color: riskColor,
-      fontSize: "48px",
-      margin: "10px 0",
-    }}
-  >
-    {riskScore}
-  </h1>
-
-  <h2
-    style={{
-      color: riskColor,
-    }}
-  >
-    {riskLevel} RISK
-  </h2>
-</div>
-  </h2>
-</div>
-
+  if (loggedIn) {
+    return (
       <div
         style={{
-          display: "flex",
-          gap: "20px",
-          flexWrap: "wrap",
-          marginBottom: "20px",
-          fontSize: "32px",
-          fontWeight: "bold",
-        }}
-      >
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px",
-            minWidth: "220px",
-          }}
-        >
-          <h3>Total Threats</h3>
-          <h1>{totalThreats}+</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px",
-            minWidth: "220px",
-          }}
-        >
-          <h3>User</h3>
-          <h2>{username}</h2>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px",
-            minWidth: "220px",
-          }}
-        >
-          <h3>🔴 High</h3>
-          <h1>{highCount}+</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px",
-            minWidth: "220px",
-          }}
-        >
-          <h3>🟡 Medium</h3>
-          <h1>{mediumCount}+</h1>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px",
-            minWidth: "220px",
-          }}
-        >
-          <h3>🟢 Low</h3>
-          <h1>{lowCount}+</h1>
-        </div>
-      </div>
-
-      <button
-        onClick={handleLogout}
-        style={{
-          background: "#ef4444",
+          minHeight: "100vh",
+          background: "#0f172a",
           color: "white",
-          border: "none",
-          padding: "12px 20px",
-          borderRadius: "8px",
-          cursor: "pointer",
-          marginBottom: "25px",
+          padding: "30px",
         }}
       >
-        Logout
-      </button>
-
-      <div
-        style={{
-          background: "#1e293b",
-          padding: "20px",
-          borderRadius: "10px",
-          marginBottom: "20px",
-        }}
-      >
-        <h2>Threat Prediction</h2>
-
-        <input
-          type="text"
-          placeholder="Threat Type (Malware, DDoS, Brute Force)"
-          value={threatType}
-          onChange={(e) =>
-            setThreatType(e.target.value)
-          }
+        <h1
           style={{
-            width: "250px",
-            padding: "10px",
-            marginRight: "10px",
-            marginTop: "10px",
-            color: "white",
-            background: "#0f172a",
-            border: "1px solid #334155",
-            borderRadius: "8px",
-          }}
-        />
-
-        <input
-          type="text"
-          placeholder="Source (IDS, Firewall, WAF)"
-          value={source}
-          onChange={(e) =>
-            setSource(e.target.value)
-          }
-          style={{
-            width: "250px",
-            padding: "10px",
-            marginRight: "10px",
-            marginTop: "10px",
-            color: "white",
-            background: "#0f172a",
-            border: "1px solid #334155",
-            borderRadius: "8px",
-          }}
-        />
-
-        <button
-          onClick={handlePredict}
-          style={{
-            padding: "10px 20px",
-            background: "#00d4ff",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
+            textAlign: "center",
+            color: "#00d4ff",
+            fontSize: "52px",
+            fontWeight: "bold",
+            textShadow:
+              "0 0 20px #00d4ff",
           }}
         >
-          Predict
-        </button>
+          🛡️ AI Cyber Threat Intelligence Platform
+        </h1>
 
-        {predictionResult && (
-          <div
+        <div
+          style={{
+            background:
+              highCount > 5
+                ? "#7f1d1d"
+                : highCount > 0
+                ? "#78350f"
+                : "#14532d",
+            padding: "15px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+            textAlign: "center",
+            fontWeight: "bold",
+            fontSize: "18px",
+          }}
+        >
+          {alertMessage}
+        </div>
+
+        <p
+          style={{
+            textAlign: "center",
+            color: "#94a3b8",
+          }}
+        >
+          Last Updated:
+          {" "}
+          {currentTime}
+        </p>
+
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "25px",
+            color: "#22c55e",
+            fontWeight: "bold",
+          }}
+        >
+          🟢 Live Monitoring Active
+        </div>
+
+        {/* RISK SCORE */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "25px",
+            borderRadius: "12px",
+            marginBottom: "25px",
+            textAlign: "center",
+            border:
+              `2px solid ${riskColor}`,
+          }}
+        >
+          <h2>
+            🤖 AI Risk Score
+          </h2>
+
+          <h1
             style={{
-              marginTop: "20px",
-              padding: "15px",
-              background: "#0f172a",
-              borderRadius: "10px",
-              border: "1px solid #00d4ff",
+              color: riskColor,
+              fontSize: "50px",
             }}
           >
-            <h3>
-              Predicted Severity:{" "}
-              {predictionResult}
-            </h3>
-          </div>
-        )}
-      </div>
+            {riskScore}
+          </h1>
 
-      <input
-  type="text"
-  placeholder="Search Threat Type"
-  value={searchTerm}
-  onChange={(e) =>
-    setSearchTerm(
-      e.target.value
-    )
-  }
-  style={{
-    width: "300px",
-    padding: "10px",
-    fontSize: "16px",
-    marginBottom: "15px",
-    borderRadius: "8px",
-  }}
-/>
+          <h2
+            style={{
+              color: riskColor,
+            }}
+          >
+            {riskLevel} RISK
+          </h2>
 
-      <div
-        style={{
-          background: "#1e293b",
-          padding: "20px",
-          borderRadius: "10px",
-        }}
-      >
+          <h3>
+            Security Score:
+            {" "}
+            {securityScore}/100
+          </h3>
+        </div>
+
+        {/* KPI CARDS */}
+
         <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "20px",
+            marginBottom: "25px",
+          }}
+        >
+          {[
+            {
+              title:
+                "Total Threats",
+              value:
+                totalThreats,
+            },
+            {
+              title:
+                "High Threats",
+              value:
+                highCount,
+            },
+            {
+              title:
+                "Medium Threats",
+              value:
+                mediumCount,
+            },
+            {
+              title:
+                "Low Threats",
+              value:
+                lowCount,
+            },
+          ].map(
+            (
+              card,
+              index
+            ) => (
+              <div
+                key={index}
+                style={{
+                  background:"#1e293b",
+                  padding:
+                    "20px",
+                  borderRadius:
+                    "10px",
+                  minWidth:
+                    "220px",
+                  flex: 1,
+                }}
+              >
+                <h3>
+                  {card.title}
+                </h3>
+
+                <h1>
+                  {card.value}
+                </h1>
+              </div>
+            )
+          )}
+        </div>
+
+        
+          <button
+  onClick={handleLogout}
   style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginTop: "20px",
-    marginBottom: "20px",
+    background:"#ef4444",
+    border:"none",
+    color:"white",
+    padding:"12px 20px",
+    borderRadius:"8px",
+    cursor:"pointer",
+    marginBottom:"20px",
   }}
 >
-  <h2>Threat Analytics</h2>
+  Logout
+</button>
 
-    <div
-  style={{
-    background: "#7f1d1d",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>⚠ Most Recent Threat</h3>
+        {/* PREDICTION */}
 
-  <h2>{topThreat}</h2>
-</div>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h2>
+            Threat Prediction
+          </h2>
 
-  <PieChart width={400} height={350}>
-    <Pie
-      data={chartData}
-      cx="50%"
-      cy="50%"
-      outerRadius={100}
-      dataKey="value"
-      label
-    >
-      {chartData.map(
-        (entry, index) => (
-          <Cell
-            key={index}
-            fill={
-              COLORS[index]
+          <input
+            type="text"
+            placeholder="Threat Type"
+            value={threatType}
+            onChange={(e) =>
+              setThreatType(
+                e.target.value
+              )
             }
+            style={{
+              width:
+                "250px",
+              padding:
+                "10px",
+              marginRight:
+                "10px",
+            }}
           />
-        )
-      )}
-    </Pie>
 
-    <Tooltip />
-    <Legend />
-  </PieChart>
-</div>
-<div
-  style={{
-    display: "flex",
-    gap: "30px",
-    alignItems: "center",
-    marginTop: "20px",
-  }}
-></div>
-<div
-  style={{
-    marginTop: "40px",
-  }}
->
-  <h3>Threat Trend Analysis</h3>
+          <input
+            type="text"
+            placeholder="Source"
+            value={source}
+            onChange={(e) =>
+              setSource(
+                e.target.value
+              )
+            }
+            style={{
+              width:
+                "250px",
+              padding:
+                "10px",
+              marginRight:
+                "10px",
+            }}
+          />
 
-  <ResponsiveContainer
-    width="100%"
-    height={350}
-  >
-    <LineChart data={trendData}>
-      <CartesianGrid strokeDasharray="3 3" />
+          <button
+            onClick={
+              handlePredict
+            }
+          >
+            Predict
+          </button>
 
-      <XAxis dataKey="name" />
+          {predictionResult && (
+            <h3
+              style={{
+                marginTop:
+                  "15px",
+              }}
+            >
+              Severity:
+              {" "}
+              {
+                predictionResult
+              }
+            </h3>
+          )}
+        </div>
 
-      <YAxis />
+        {/* EXECUTIVE SUMMARY */}
 
-      <Tooltip />
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            Executive Summary
+          </h3>
 
-      <Line
-        type="monotone"
-        dataKey="count"
-        stroke="#00d4ff"
-        strokeWidth={3}
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
+          <p>
+            Total Threats:
+            {" "}
+            {
+              totalThreats
+            }
+          </p>
 
-<div
-  style={{
-    display: "flex",
-    gap: "30px",
-    alignItems: "center",
-    marginTop: "20px",
-  }}
->
+          <p>
+            Top Threat:
+            {" "}
+            {
+              topThreat
+            }
+          </p>
 
-</div>
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginTop: "20px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Recent Activity</h3>
+          <p>
+            Threat Trend:
+            {" "}
+            {
+              trendStatus
+            }
+          </p>
 
-  <div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginTop: "20px",
-    maxHeight: "300px",
-    overflowY: "auto",
-  }}
->
-  <h3>🚨 Live Threat Feed</h3>
+          <p>
+            Security Score:
+            {" "}
+            {
+              securityScore
+            }
+            /100
+          </p>
+        </div>
 
-  {recentThreats.map((item) => (
-    <div
-      key={item.id}
-      style={{
-        background: "#334155",
-        padding: "12px",
-        marginBottom: "10px",
-        borderRadius: "8px",
-        borderLeft:
-          item.predicted_severity === "High"
-            ? "5px solid #ef4444"
-            : item.predicted_severity === "Medium"
-            ? "5px solid #facc15"
-            : "5px solid #22c55e",
-      }}
-    >
-      <strong>{item.threat_type}</strong>
-      {" | "}
-      {item.source}
-      {" | "}
-      {item.predicted_severity}
-    </div>
-  ))}
-</div>
+        {/* SYSTEM HEALTH */}
 
-  <p>
-    Total Predictions: {totalThreats}
-  </p>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            System Health Monitor
+          </h3>
 
-  <p>
-    High Threats: {highCount}
-  </p>
+          <p>
+            🟢 System:
+            {" "}
+            {
+              systemStatus
+            }
+          </p>
 
-  <p>
-    Medium Threats: {mediumCount}
-  </p>
+          <p>
+            🟢 Database:
+            {" "}
+            {
+              databaseStatus
+            }
+          </p>
 
-  <p>
-    Low Threats: {lowCount}
-  </p>
-  <h3>
-  Latest Threats
-  (
-  {recentPredictions.length}
-  )
-</h3>
+          <p>
+            🟢 AI Engine:
+            {" "}
+            {
+              aiEngineStatus
+            }
+          </p>
 
-{recentPredictions.map((item) => (
-  <div
-    key={item.id}
-    style={{
-      background: "#334155",
-      padding: "10px",
-      marginBottom: "10px",
-      borderRadius: "8px",
-    }}
-  >
-    {item.threat_type}
-    {" - "}
-    {item.predicted_severity}
-  </div>
-))}
-</div>
+          <p>
+            Incident Response:
+            {" "}
+            {
+              responseStatus
+            }
+          </p>
+        </div>
 
-<h3>Top Threat Types</h3>
+        {/* THREAT METRICS */}
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginTop: "20px",
-  }}
->
-  <h3>Threat Sources</h3>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            Threat Intelligence Metrics
+          </h3>
 
-  <ResponsiveContainer
-    width="100%"
-    height={300}
-  >
-    <BarChart data={sourceData}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="source" />
-      <YAxis />
-      <Tooltip />
-      <Bar
-        dataKey="count"
-        fill="#22c55e"
-      />
-    </BarChart>
-  </ResponsiveContainer>
-</div>
+          <p>
+            Coverage:
+            {" "}
+            {
+              threatCoverage
+            }
+            %
+          </p>
 
-<ResponsiveContainer
-  width="100%"
-  height={350}
->
-  <BarChart data={barData}>
-    <CartesianGrid strokeDasharray="3 3" />
-    <XAxis dataKey="name" />
-    <YAxis />
-    <Tooltip />
+          <p>
+            Detection:
+            {" "}
+            {
+              detectionAccuracy
+            }
+            %
+          </p>
 
-    <Bar
-      dataKey="count"
-      fill="#00d4ff"
-    />
-  </BarChart>
-</ResponsiveContainer>
+          <p>
+            Readiness:
+            {" "}
+            {
+              responseReadiness
+            }
+            %
+          </p>
+        </div>
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Threat Risk Level</h3>
+              {/* MITRE ATT&CK */}
 
-  <progress
-    value={highCount}
-    max={totalThreats || 1}
-    style={{
-      width: "100%",
-      height: "25px",
-    }}
-  />
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>
+            MITRE ATT&CK Categories
+          </h3>
 
-  <p>
-    Risk Score:
-    {" "}
-    {Math.round(
-      (highCount /
-        (totalThreats || 1)) *
-        100
-    )}
-    %
-  </p>
-</div>
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Threat Distribution</h3>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+            }}
+          >
+            {mitreCategories.map(
+              (
+                category,
+                index
+              ) => (
+                <span
+                  key={index}
+                  style={{
+                    background:"#0f172a",
+                    border:
+                      "1px solid #00d4ff",
+                    color:
+                      "#00d4ff",
+                    fontWeight:
+                      "bold",
+                    padding:
+                      "10px 15px",
+                    borderRadius:
+                      "8px",
+                  }}
+                >
+                  {category}
+                </span>
+              )
+            )}
+          </div>
+        </div>
 
-  <p>🔴 High: {highCount}</p>
-  <p>🟡 Medium: {mediumCount}</p>
-  <p>🟢 Low: {lowCount}</p>
-</div>
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginTop: "20px",
-    marginBottom: "20px",
-  }}
->
-  <h3>AI Threat Summary</h3>
+        {/* SOC COMMAND CENTER */}
 
-  <p>
-    Total threats detected:
-    {" "}
-    {totalThreats}
-  </p>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>
+            🛡 SOC Command Center
+          </h3>
 
-  <p>
-    High severity threats:
-    {" "}
-    {highCount}
-  </p>
+          <p>
+            🚨 Active Alerts:
+            {" "}
+            {highCount}
+          </p>
 
-  <p>
-    Current system risk:
-    {" "}
-    {highCount > 3
-      ? "Critical"
-      : "Moderate"}
-  </p>
-</div>
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Cyber Threat News Feed</h3>
+          <p>
+            👀 Monitoring:
+            Active
+          </p>
 
-  {threatNews.map((news, index) => (
-    <p key={index}>📰 {news}</p>
-  ))}
-</div>
+          <p>
+            ⚡ Threat Level:
+            {" "}
+            {riskLevel}
+          </p>
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>System Health Monitor</h3>
+          <p>
+            📋 Incident Queue:
+            {" "}
+            {totalThreats}
+          </p>
+        </div>
 
-  <p>🟢 System Status: {systemStatus}</p>
+        {/* GLOBAL MONITOR */}
 
-  <p>🟢 Database: {databaseStatus}</p>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            textAlign:
+              "center",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            Global Threat Monitor
+          </h3>
 
-  <p>🟢 AI Engine: {aiEngineStatus}</p>
-</div>
+          <h1>🌍</h1>
 
-<div
-  style={{
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  }}
->
-  <h3>Threat Intelligence Metrics</h3>
+          <p>
+            Monitoring Global
+            Threat Activity
+          </p>
+        </div>
 
-  <p>
-    🎯 Threat Coverage:
-    {" "}
-    {threatCoverage}%
-  </p>
+        {/* PIE CHART */}
 
-  <progress
-    value={threatCoverage}
-    max="100"
-    style={{
-      width: "100%",
-      height: "20px",
-    }}
-  />
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h2>
+            Threat Analytics
+          </h2>
 
-  <p
-    style={{
-      marginTop: "15px",
-    }}
-  >
-    🧠 Detection Accuracy:
-    {" "}
-    {detectionAccuracy}%
-  </p>
+          <PieChart
+            width={400}
+            height={320}
+          >
+            <Pie
+              data={chartData}
+              dataKey="value"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              label
+            >
+              {chartData.map(
+                (
+                  entry,
+                  index
+                ) => (
+                  <Cell
+                    key={index}
+                    fill={
+                      COLORS[
+                        index
+                      ]
+                    }
+                  />
+                )
+              )}
+            </Pie>
 
-  <progress
-    value={detectionAccuracy}
-    max="100"
-    style={{
-      width: "100%",
-      height: "20px",
-    }}
-  />
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </div>
 
-  <p
-    style={{
-      marginTop: "15px",
-    }}
-  >
-    ⚡ Response Readiness:
-    {" "}
-    {responseReadiness}%
-  </p>
+        {/* LINE CHART */}
 
-  <progress
-    value={responseReadiness}
-    max="100"
-    style={{
-      width: "100%",
-      height: "20px",
-    }}
-  />
-</div>
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            Threat Trend
+            Analysis
+          </h3>
 
-<h2>Prediction History</h2>
+          <ResponsiveContainer
+            width="100%"
+            height={320}
+          >
+            <LineChart
+              data={trendData}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
 
-{predictions.length === 0 && (
-  <div
-    style={{
-      background: "#1e293b",
-      padding: "20px",
-      borderRadius: "10px",
-      marginBottom: "20px",
-    }}
-  >
-    No Threats Found
-  </div>
-)}
+              <XAxis
+                dataKey="name"
+              />
+
+              <YAxis />
+
+              <Tooltip />
+
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke="#00d4ff"
+                strokeWidth={3}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* BAR CHART */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:
+              "20px",
+          }}
+        >
+          <h3>
+            Threat Sources
+          </h3>
+
+          <ResponsiveContainer
+            width="100%"
+            height={320}
+          >
+            <BarChart
+              data={sourceData}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <XAxis
+                dataKey="source"
+              />
+
+              <YAxis />
+
+              <Tooltip />
+
+              <Bar
+                dataKey="count"
+                fill="#22c55e"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* HEATMAP */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            Threat Severity
+            Heatmap
+          </h3>
+
+          <div
+            style={{
+              display:
+                "flex",
+              gap: "20px",
+              flexWrap:
+                "wrap",
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minWidth:
+                  "200px",
+                background:"#7f1d1d",
+                padding:
+                  "20px",
+                borderRadius:
+                  "10px",
+                textAlign:
+                  "center",
+              }}
+            >
+              <h2>
+                🔴 High
+              </h2>
+
+              <h1>
+                {highCount}
+              </h1>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                minWidth:
+                  "200px",
+                background:"#78350f",
+                padding:
+                  "20px",
+                borderRadius:
+                  "10px",
+                textAlign:
+                  "center",
+              }}
+            >
+              <h2>
+                🟡 Medium
+              </h2>
+
+              <h1>
+                {
+                  mediumCount
+                }
+              </h1>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                minWidth:
+                  "200px",
+                background:
+                  "#14532d",
+                padding:
+                  "20px",
+                borderRadius:
+                  "10px",
+                textAlign:
+                  "center",
+              }}
+            >
+              <h2>
+                🟢 Low
+              </h2>
+
+              <h1>
+                {lowCount}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* LIVE FEED */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <h3>
+            🚨 Live Threat Feed
+          </h3>
+
+          {recentThreats.map(
+            (item) => (
+              <div
+                key={item.id}
+                style={{
+                  background:"#334155",
+                  padding:"10px",
+                  marginBottom:"10px",
+                  borderRadius:"8px",
+                }}
+              >
+                <strong>
+                  {
+                    item.threat_type
+                  }
+                </strong>
+
+                {" | "}
+
+                {item.source}
+
+                {" | "}
+
+                {
+                  item.predicted_severity
+                }
+              </div>
+            )
+          )}
+        </div>
+
+                {/* TOP SOURCES */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>
+            Top Threat Sources
+          </h3>
+
+          {topSources.map(
+            (item, index) => (
+              <p key={index}>
+                {item.source}
+                {" : "}
+                {item.count}
+              </p>
+            )
+          )}
+        </div>
+
+        {/* FUTURE MODULES */}
+
+        <div
+          style={{
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>
+             Planned Security Enhancements
+          </h3>
+
+          {futureModules.map(
+            (
+              module,
+              index
+            ) => (
+              <p key={index}>
+                ✅ {module}
+              </p>
+            )
+          )}
+        </div>
+
+        {/* SEARCH */}
 
         <input
-  type="text"
-  placeholder="Search Threat Type..."
-  value={searchTerm}
-  onChange={(e) =>
-    setSearchTerm(e.target.value)
-  }
-  style={{
-    width: "300px",
-    padding: "10px",
-    marginBottom: "15px",
-    borderRadius: "8px",
-  }}
-/>
- <div
-  style={{
-    display: "flex",
-    gap: "10px",
-    marginBottom: "15px",
-  }}
->
-  <button
-    onClick={exportPDF}
-    style={{
-      background: "#22c55e",
-      color: "white",
-      border: "none",
-      padding: "10px 20px",
-      borderRadius: "8px",
-      cursor: "pointer",
-    }}
-  >
-    Export PDF
-  </button>
+          type="text"
+          placeholder="Search Threat Type..."
+          value={searchTerm}
+          onChange={(e) =>
+            setSearchTerm(
+              e.target.value
+            )
+          }
+          style={{
+            width: "300px",
+            padding: "10px",
+            marginBottom:"20px",
+            borderRadius:"8px",
+          }}
+        />
 
-  <button
-    onClick={exportCSV}
-    style={{
-      background: "#3b82f6",
-      color: "white",
-      border: "none",
-      padding: "10px 20px",
-      borderRadius: "8px",
-      cursor: "pointer",
-    }}
-  >
-    Export CSV
-  </button>
-</div> 
+        {/* EXPORTS */}
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginBottom:"20px",
+          }}
+        >
+          <button
+            onClick={
+              exportPDF
+            }
+          >
+            Export PDF
+          </button>
+
+          <button
+            onClick={
+              exportCSV
+            }
+          >
+            Export CSV
+          </button>
+        </div>
+
+        {/* HISTORY */}
+
+        <h2>
+          Prediction History
+        </h2>
 
         <table
           style={{
             width: "100%",
-            borderCollapse: "collapse",
-            background: "white",
+            borderCollapse:
+              "collapse",
+            background:
+              "white",
             color: "black",
           }}
         >
           <thead>
             <tr>
               <th>ID</th>
-              <th>Threat Type</th>
-              <th>Source</th>
-              <th>Action</th>
+              <th>
+                Threat Type
+              </th>
+              <th>
+                Source
+              </th>
+              <th>
+                Severity
+              </th>
+              <th>
+                Action
+              </th>
             </tr>
           </thead>
 
           <tbody>
-            {predictions.map((item) => (
-              <tr
-  key={item.id}
-  onClick={() =>
-    openThreatDetails(item)
-  }
-  style={{
-    cursor: "pointer",
-  }}
->
-                <td>{item.id}</td>
-                <td>{item.threat_type}</td>
-                <td>{item.source}</td>
-                <td>
-  <span
-    style={{
-      padding: "8px 14px",
-      borderRadius: "999px",
-      color: "white",
-      fontWeight: "bold",
-      fontSize: "14px",
-      boxShadow: "0 0 10px rgba(255,255,255,0.2)",
-      background:
-        item.predicted_severity === "High"
-          ? "#dc2626"
-          : item.predicted_severity === "Medium"
-          ? "#ca8a04"
-          : "#16a34a",
-    }}
-  >
-    <td>
-  <span
-    style={{
-      padding: "5px 10px",
-      borderRadius: "6px",
-      background:
-        item.predicted_severity === "High"
-          ? "#dc2626"
-          : item.predicted_severity === "Medium"
-          ? "#f59e0b"
-          : "#16a34a",
-      color: "white",
-      fontWeight: "bold",
-    }}
-  >
-    {item.predicted_severity}
-  </span>
-</td>
-  </span>
-</td>
-                <td>
-  <button
-    onClick={() =>
-      handleDelete(
-        item.id
-      )
-    }
-    
-    style={{
-      background:
-        "#ef4444",
-      color: "white",
-      border: "none",
-      padding:
-        "5px 10px",
-      borderRadius:
-        "5px",
-      cursor: "pointer",
-    }}
-  >
-    Delete
-  </button>
-</td>
-              </tr>
-            ))}
+            {filteredPredictions.map(
+              (item) => (
+                <tr
+                  key={item.id}
+                  onClick={() =>
+                    openThreatDetails(
+                      item
+                    )
+                  }
+                  style={{
+                    cursor:
+                      "pointer",
+                  }}
+                >
+                  <td>
+                    {item.id}
+                  </td>
+
+                  <td>
+                    {
+                      item.threat_type
+                    }
+                  </td>
+
+                  <td>
+                    {
+                      item.source
+                    }
+                  </td>
+
+                  <td>
+                    <span
+                      style={{
+                        background:
+                          item.predicted_severity ===
+                          "High"
+                            ? "#dc2626"
+                            : item.predicted_severity ===
+                              "Medium"
+                            ? "#ca8a04"
+                            : "#16a34a",
+
+                        color:
+                          "white",
+
+                        padding:
+                          "6px 10px",
+
+                        borderRadius:
+                          "8px",
+                      }}
+                    >
+                      {
+                        item.predicted_severity
+                      }
+                    </span>
+                  </td>
+
+                  <td>
+                    <button
+                      onClick={(
+                        e
+                      ) => {
+                        e.stopPropagation();
+
+                        handleDelete(
+                          item.id
+                        );
+                      }}
+                      style={{
+                        background:
+                          "#ef4444",
+                        color:
+                          "white",
+                        border:
+                          "none",
+                        padding:
+                          "6px 10px",
+                        borderRadius:
+                          "6px",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
+
+        {/* MODAL */}
+
         {showModal &&
-  selectedThreat && (
+          selectedThreat && (
+            <div
+              onClick={() =>
+                setShowModal(
+                  false
+                )
+              }
+              style={{
+                position:
+                  "fixed",
+                top: 0,
+                left: 0,
+                width:
+                  "100%",
+                height:
+                  "100%",
+                background:
+                  "rgba(0,0,0,0.7)",
+
+                display:
+                  "flex",
+
+                justifyContent:
+                  "center",
+
+                alignItems:
+                  "center",
+              }}
+            >
+              <div
+                onClick={(
+                  e
+                ) =>
+                  e.stopPropagation()
+                }
+                style={{
+                  background:"#1e293b",
+                  color:"white",
+                  padding:"30px",
+                  borderRadius:"12px",
+                  width:"500px",
+                }}
+              >
+                <h2>
+                  Threat Details
+                </h2>
+
+                <p>
+                  <strong>
+                    ID:
+                  </strong>{" "}
+                  {
+                    selectedThreat.id
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Threat:
+                  </strong>{" "}
+                  {
+                    selectedThreat.threat_type
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Source:
+                  </strong>{" "}
+                  {
+                    selectedThreat.source
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Severity:
+                  </strong>{" "}
+                  {
+                    selectedThreat.predicted_severity
+                  }
+                </p>
+
+                <button
+                  onClick={() =>
+                    setShowModal(
+                      false
+                    )
+                  }
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
+      </div>
+    );
+  }
+
+  return (
     <div
-      onClick={() =>
-        setShowModal(false)
-      }
       style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        background:
-          "rgba(0,0,0,0.7)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+        minHeight:"100vh",
+        display:"flex",
+        justifyContent:"center",
+        alignItems:"center",
+        background:"linear-gradient(to right,#001f3f,#000814)",
       }}
     >
       <div
-        onClick={(e) =>
-          e.stopPropagation()
-        }
         style={{
-          background: "#1e293b",
-          padding: "30px",
-          borderRadius: "12px",
-          width: "500px",
-          color: "white",
+          width:"400px",
+          padding:"30px",
+          background:"white",
+          borderRadius:"15px",
         }}
       >
-        <h2>Threat Details</h2>
+        <h1
+          style={{
+            textAlign:"center",
+            marginBottom:"20px",
+          }}
+        >
+          Cyber Threat
+          Intelligence
+        </h1>
 
-        <p>
-          <strong>ID:</strong>{" "}
-          {selectedThreat.id}
-        </p>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) =>
+            setUsername(
+              e.target.value
+            )
+          }
+          style={{
+            width:"100%",
+            padding:"12px",
+            marginBottom:"10px",
+          }}
+        />
 
-        <p>
-          <strong>Threat Type:</strong>{" "}
-          {selectedThreat.threat_type}
-        </p>
-
-        <p>
-          <strong>Source:</strong>{" "}
-          {selectedThreat.source}
-        </p>
-
-        <p>
-          <strong>Severity:</strong>{" "}
-          {selectedThreat.predicted_severity}
-        </p>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(
+              e.target.value
+            )
+          }
+          style={{
+            width:"100%",
+            padding:"12px",
+            marginBottom: "15px",
+          }}
+        />
 
         <button
-          onClick={() =>
-            setShowModal(false)
+          onClick={
+            handleLogin
           }
+          style={{
+            width:"100%",
+            padding:"12px",
+            background:"#00d4ff",
+            border:"none",
+          }}
         >
-          Close
+          LOGIN
         </button>
       </div>
     </div>
-)}
-      </div>
-    </div>
   );
-}
-
-return (
-  <div
-    style={{
-      minHeight: "100vh",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      background:
-        "linear-gradient(to right,#001f3f,#000814)",
-    }}
-  >
-    <div
-      style={{
-        width: "400px",
-        padding: "30px",
-        background: "white",
-        borderRadius: "15px",
-        boxShadow:
-          "0 0 20px rgba(0,0,0,0.3)",
-      }}
-    >
-      <h1
-        style={{
-          textAlign: "center",
-          marginBottom: "20px",
-        }}
-      >
-        Cyber Threat Intelligence
-      </h1>
-
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) =>
-          setUsername(
-            e.target.value
-          )
-        }
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "10px",
-          border:
-            "1px solid #ccc",
-          borderRadius: "8px",
-        }}
-      />
-
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(
-            e.target.value
-          )
-        }
-        style={{
-          width: "100%",
-          padding: "12px",
-          marginBottom: "15px",
-          border:
-            "1px solid #ccc",
-          borderRadius: "8px",
-        }}
-      />
-
-      <button
-        onClick={handleLogin}
-        style={{
-          width: "100%",
-          padding: "12px",
-          background: "#00d4ff",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
-        LOGIN
-      </button>
-    </div>
-  </div>
-);
 }
 
 export default App;
